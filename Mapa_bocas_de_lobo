@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cadastro de Drenagem — Consulta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--orange:#e87516;--orange2:#f59b45;--orange3:#fff1e3;--dark:#3a2112;--line:#eadfd5;--bg:#fffaf6;--white:#fff;--muted:#806f62}
+*{box-sizing:border-box}body{margin:0;font-family:Montserrat,Arial,sans-serif;background:var(--bg);color:var(--dark)}
+header{background:linear-gradient(135deg,#c9570c,#f18b2d);color:#fff;padding:26px 30px}
+header h1{margin:0;font-size:26px;font-weight:800}header p{margin:7px 0 0;opacity:.9}
+.toolbar{padding:16px 22px;background:#fff;display:flex;gap:9px;flex-wrap:wrap;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+input,select,button{font:500 13px Montserrat,Arial;padding:11px 12px;border:1px solid #ddcfc3;border-radius:9px;background:#fff;color:var(--dark)}
+input{min-width:300px}button{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:700;cursor:pointer}
+button:hover{background:#cf5e09}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:18px 22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:13px;padding:16px;box-shadow:0 3px 12px #6d371015}
+.stat b{font-size:25px;font-weight:800;color:var(--orange);display:block}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.content{padding:0 22px 22px}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 12px #6d371015;overflow:hidden}
+.section-title{padding:17px 19px;border-bottom:1px solid var(--line);font-weight:800;font-size:16px}
+.summary{padding:18px}.summary h3{margin:0 0 10px;font-size:14px;color:var(--orange)}
+table{width:100%;border-collapse:collapse}td{padding:8px 7px;border-bottom:1px solid #f0e7df;font-size:12px}td:last-child{text-align:right;font-weight:800}
+.badges{display:flex;flex-wrap:wrap;gap:6px}.badge{padding:7px 9px;background:var(--orange3);border:1px solid #f5d2b2;border-radius:20px;font-size:11px}
+.cards{padding:18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.card{border:1px solid var(--line);border-radius:13px;padding:15px;background:linear-gradient(180deg,#fff,#fffaf7);position:relative}
+.card:hover{box-shadow:0 6px 20px #6d37101a;transform:translateY(-1px)}
+.card-head{display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:12px}
+.card h3{margin:0;font-size:14px;font-weight:800}.type{background:var(--orange);color:#fff;padding:5px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.row{display:grid;grid-template-columns:105px 1fr;gap:7px;padding:5px 0;border-bottom:1px solid #f3ebe4;font-size:11px}.row b{color:#8a7668}.row:last-child{border:0}
+.coords{font-family:monospace;font-size:10px;color:#a35312}.pos{display:inline-block;padding:4px 7px;background:#fff0df;border-radius:6px;color:#a84f0b;font-weight:700}
+.map-panel{margin-top:18px}.map-wrap{padding:18px;background:#fff}
+#map{width:100%;height:480px;border:1px solid var(--line);border-radius:12px;background:#fff7ef;display:block}
+.map-note{margin-top:9px;font-size:11px;color:var(--muted)}
+.marker{cursor:pointer}.street-label{font-size:11px;font-weight:700;fill:#70401f}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}input{min-width:220px}.cards{grid-template-columns:1fr}}
+
+#map{position:relative;width:100%;height:560px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#eee;cursor:grab;user-select:none}
+#map.dragging{cursor:grabbing}
+#mapTiles,#mapMarkers{position:absolute;inset:0;overflow:hidden}
+#mapTiles{z-index:1;background:#eee}
+#mapMarkers{z-index:2;pointer-events:none}
+.map-tile{position:absolute;width:256px;height:256px;display:block;pointer-events:none}
+.map-marker{position:absolute;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 7px #0007;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer}
+.map-marker:hover{transform:translate(-50%,-50%) scale(1.25);z-index:20}
+.map-marker::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid currentColor;opacity:.18}
+.map-popup{position:absolute;z-index:50;min-width:240px;max-width:320px;background:#fff;border:1px solid #d9c6b7;border-radius:10px;padding:10px 12px;box-shadow:0 8px 25px #0003;font:500 11px Montserrat,Arial;color:var(--dark);pointer-events:auto}
+.map-popup b{display:block;font-size:12px;margin-bottom:4px}
+.map-popup .close{position:absolute;right:7px;top:4px;border:0;background:none;color:#7b6a5d;font-size:18px;padding:0;cursor:pointer}
+#mapZoom{position:absolute;right:12px;top:12px;z-index:60;display:flex;flex-direction:column;gap:5px}
+#mapZoom button{width:36px;height:36px;padding:0;border-radius:8px;background:#fff;color:var(--dark);border:1px solid #d9c6b7;box-shadow:0 2px 7px #0002;font-size:20px;line-height:1}
+#mapZoom button:hover{background:#fff3e8}
+#mapStatus{position:absolute;left:12px;bottom:12px;z-index:60;background:#fff;opacity:.94;border:1px solid #d9c6b7;border-radius:8px;padding:7px 10px;font-size:10px;color:#6d5c50;box-shadow:0 2px 7px #0002}
+.map-compass{position:absolute;left:12px;top:12px;z-index:60;background:#fff;opacity:.94;border:1px solid #d9c6b7;border-radius:8px;padding:8px 10px;font-size:11px;font-weight:800;color:#9b4c0d;box-shadow:0 2px 7px #0002}
+</style></head>
+<body>
+<header><h1>Cadastro de Drenagem</h1><p>Consulta operacional de bocas de lobo e caixas por logradouro, posição, bairro e problemas.</p></header>
+<div class="toolbar">
+<input id="search" placeholder="Pesquisar rua, nº, bairro, ID, problema...">
+<select id="bairro"><option value="">Todos os bairros</option></select>
+<select id="tipo"><option value="">Todos os tipos</option></select>
+<select id="posicao"><option value="">Todas as posições</option></select>
+<select id="problema"><option value="">Todos os problemas</option></select>
+<button onclick="clearFilters()">Limpar filtros</button>
+</div>
+<div class="stats" id="stats"></div>
+<main class="content">
+<section class="panel"><div class="section-title">Resumo da consulta</div><div class="summary" id="summary"></div></section>
+<section class="panel" style="margin-top:18px"><div class="section-title">Registros encontrados</div><div class="cards" id="cards"></div></section>
+<section class="panel map-panel"><div class="section-title">Mapa das bocas de lobo e caixas</div><div class="map-wrap"><div id="map"><div id="mapTiles"></div><div id="mapMarkers"></div><div id="mapZoom"><button id="zoomIn">+</button><button id="zoomOut">−</button><button id="zoomFit">⌂</button></div><div class="map-compass">N ↑</div><div id="mapStatus">Carregando mapa...</div></div><div class="map-note">Mapa de ruas interativo. Os pontos usam as latitude/longitude do cadastro e têm cor por bairro. O sistema tenta um servidor público de mapas e possui alternativa automática.</div></div></section>
+</main>
+<script>
+const original=[{"id":"BL-00001","data":"14/09/2026","hora":"08:06:38","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":526,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza","observacoes":"","latitude":-236749316,"longitude":-463446269,"precisao_gps":2.83409996032714e+16,"numero_via_oficial":23090001,"lat_num":-23.6749316,"lon_num":-46.3446269},{"id":"BL-00002","data":"14/09/2026","hora":"08:07:09","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":526,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236750421,"longitude":-46344689,"precisao_gps":3524300003051750.0,"numero_via_oficial":23090001,"lat_num":-23.6750421,"lon_num":-4.6344689},{"id":"BL-00003","data":"14/09/2026","hora":"08:07:51","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":526,"bairro":"OURO FINO PAULISTA","posicao":"","problemas":"Limpeza","observacoes":"","latitude":-236747655,"longitude":-463444402,"precisao_gps":6122000217437740.0,"numero_via_oficial":23090001,"lat_num":-23.6747655,"lon_num":-46.3444402},{"id":"BL-00004","data":"14/09/2026","hora":"08:08:23","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":526,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza","observacoes":"","latitude":-236747272,"longitude":-463443888,"precisao_gps":5611999988555900.0,"numero_via_oficial":23090001,"lat_num":-23.6747272,"lon_num":-46.3443888},{"id":"BL-00005","data":"14/09/2026","hora":"08:09:11","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":526,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Limpeza","observacoes":"","latitude":-236746666,"longitude":-463445757,"precisao_gps":8163000106811520.0,"numero_via_oficial":23090001,"lat_num":-23.6746666,"lon_num":-46.3445757},{"id":"BL-00006","data":"14/09/2026","hora":"08:09:39","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":527,"bairro":"OURO FINO PAULISTA","posicao":"","problemas":"Limpeza","observacoes":"","latitude":-23674706,"longitude":-463445553,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-2.3674706,"lon_num":-46.3445553},{"id":"BL-00007","data":"14/09/2026","hora":"08:10:46","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":531,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236746754,"longitude":-463444455,"precisao_gps":1071399974822990.0,"numero_via_oficial":23090001,"lat_num":-23.6746754,"lon_num":-46.3444455},{"id":"BL-00008","data":"14/09/2026","hora":"08:11:29","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":531,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"Sem guia chapéu","latitude":-236747201,"longitude":-463443732,"precisao_gps":714300012588501.0,"numero_via_oficial":23090001,"lat_num":-23.6747201,"lon_num":-46.3443732},{"id":"BL-00009","data":"14/09/2026","hora":"08:13:38","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":748,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236748045,"longitude":-463442612,"precisao_gps":7.65299987792968e+16,"numero_via_oficial":23090001,"lat_num":-23.6748045,"lon_num":-46.3442612},{"id":"BL-00010","data":"14/09/2026","hora":"08:14:08","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":778,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236748849,"longitude":-463441108,"precisao_gps":7.65299987792968e+16,"numero_via_oficial":23090001,"lat_num":-23.6748849,"lon_num":-46.3441108},{"id":"BL-00011","data":"14/09/2026","hora":"08:15:16","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":775,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"Sem guia chapéu","latitude":-236747132,"longitude":-463442354,"precisao_gps":9184000015258780.0,"numero_via_oficial":23090001,"lat_num":-23.6747132,"lon_num":-46.3442354},{"id":"BL-00012","data":"14/09/2026","hora":"08:15:51","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":777,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"Sem guia chapéu","latitude":-236747918,"longitude":-463442738,"precisao_gps":7.65299987792968e+16,"numero_via_oficial":23090001,"lat_num":-23.6747918,"lon_num":-46.3442738},{"id":"BL-00013","data":"14/09/2026","hora":"08:16:47","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":781,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar tampa","observacoes":"Sem guia chapéu","latitude":-236747863,"longitude":-463442388,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-23.6747863,"lon_num":-46.3442388},{"id":"BL-00014","data":"14/09/2026","hora":"08:17:19","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":783,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar tampa","observacoes":"","latitude":-236747887,"longitude":-463442308,"precisao_gps":867300033569336.0,"numero_via_oficial":23090001,"lat_num":-23.6747887,"lon_num":-46.3442308},{"id":"BL-00015","data":"14/09/2026","hora":"08:19:32","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":800,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236748457,"longitude":-463442829,"precisao_gps":1.17349996566772e+16,"numero_via_oficial":23090001,"lat_num":-23.6748457,"lon_num":-46.3442829},{"id":"BL-00016","data":"14/09/2026","hora":"08:20:03","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":800,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236748441,"longitude":-463442882,"precisao_gps":6430899810791010.0,"numero_via_oficial":23090001,"lat_num":-23.6748441,"lon_num":-46.3442882},{"id":"BL-00017","data":"14/09/2026","hora":"08:21:12","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":801,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"Sem guia chapéu","latitude":-236748232,"longitude":-463440872,"precisao_gps":9184000015258780.0,"numero_via_oficial":23090001,"lat_num":-23.6748232,"lon_num":-46.3440872},{"id":"BL-00018","data":"14/09/2026","hora":"08:21:39","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":801,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236748645,"longitude":-463441287,"precisao_gps":6122000217437740.0,"numero_via_oficial":23090001,"lat_num":-23.6748645,"lon_num":-46.3441287},{"id":"BL-00019","data":"14/09/2026","hora":"08:23:22","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":815,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza | Refazer caixa","observacoes":"","latitude":-236748457,"longitude":-463442084,"precisao_gps":8163000106811520.0,"numero_via_oficial":23090001,"lat_num":-23.6748457,"lon_num":-46.3442084},{"id":"BL-00020","data":"14/09/2026","hora":"08:23:50","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":810,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza","observacoes":"","latitude":-236749433,"longitude":-463440826,"precisao_gps":9694000244140620.0,"numero_via_oficial":23090001,"lat_num":-23.6749433,"lon_num":-46.3440826},{"id":"BL-00021","data":"14/09/2026","hora":"08:24:42","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":815,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Limpeza","observacoes":"","latitude":-23674879,"longitude":-463441875,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-2.3674879,"lon_num":-46.3441875},{"id":"BL-00022","data":"14/09/2026","hora":"08:25:11","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":815,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-23674963,"longitude":-463439885,"precisao_gps":9694000244140620.0,"numero_via_oficial":23090001,"lat_num":-2.3674963,"lon_num":-46.3439885},{"id":"BL-00023","data":"14/09/2026","hora":"08:25:45","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":815,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"Sem guia chapéu","latitude":-23674963,"longitude":-463439885,"precisao_gps":558390007019043.0,"numero_via_oficial":23090001,"lat_num":-2.3674963,"lon_num":-46.3439885},{"id":"BL-00024","data":"14/09/2026","hora":"08:28:07","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":880,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"Sem guia chapéu","latitude":-236749622,"longitude":-463440781,"precisao_gps":8163000106811520.0,"numero_via_oficial":23090001,"lat_num":-23.6749622,"lon_num":-46.3440781},{"id":"BL-00025","data":"14/09/2026","hora":"08:28:42","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":880,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236749585,"longitude":-46344016,"precisao_gps":714300012588501.0,"numero_via_oficial":23090001,"lat_num":-23.6749585,"lon_num":-4.6344016},{"id":"BL-00026","data":"14/09/2026","hora":"08:29:12","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":881,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236750517,"longitude":-463438111,"precisao_gps":714300012588501.0,"numero_via_oficial":23090001,"lat_num":-23.6750517,"lon_num":-46.3438111},{"id":"BL-00027","data":"14/09/2026","hora":"08:29:38","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":881,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236750379,"longitude":-463437969,"precisao_gps":714300012588501.0,"numero_via_oficial":23090001,"lat_num":-23.6750379,"lon_num":-46.3437969},{"id":"BL-00028","data":"14/09/2026","hora":"08:32:03","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":896,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-23675044,"longitude":-46343872,"precisao_gps":6122000217437740.0,"numero_via_oficial":23090001,"lat_num":-2.3675044,"lon_num":-4.6343872},{"id":"BL-00029","data":"14/09/2026","hora":"08:32:26","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":896,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236750427,"longitude":-463438492,"precisao_gps":1.73470001220703e+16,"numero_via_oficial":23090001,"lat_num":-23.6750427,"lon_num":-46.3438492},{"id":"BL-00030","data":"14/09/2026","hora":"08:33:13","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":897,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar guia","observacoes":"","latitude":-236750697,"longitude":-463438001,"precisao_gps":3061199951171870.0,"numero_via_oficial":23090001,"lat_num":-23.6750697,"lon_num":-46.3438001},{"id":"BL-00031","data":"14/09/2026","hora":"08:33:35","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":897,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236750697,"longitude":-463438001,"precisao_gps":7790899658203120.0,"numero_via_oficial":23090001,"lat_num":-23.6750697,"lon_num":-46.3438001},{"id":"BL-00032","data":"14/09/2026","hora":"08:35:02","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":901,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236750643,"longitude":-463438054,"precisao_gps":714300012588501.0,"numero_via_oficial":23090001,"lat_num":-23.6750643,"lon_num":-46.3438054},{"id":"BL-00033","data":"14/09/2026","hora":"08:35:29","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":901,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236750735,"longitude":-463438072,"precisao_gps":8163000106811520.0,"numero_via_oficial":23090001,"lat_num":-23.6750735,"lon_num":-46.3438072},{"id":"BL-00034","data":"14/09/2026","hora":"08:36:19","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":900,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236750784,"longitude":-463438253,"precisao_gps":867300033569336.0,"numero_via_oficial":23090001,"lat_num":-23.6750784,"lon_num":-46.3438253},{"id":"BL-00035","data":"14/09/2026","hora":"08:36:57","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":900,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236750784,"longitude":-463438253,"precisao_gps":4593899917602530.0,"numero_via_oficial":23090001,"lat_num":-23.6750784,"lon_num":-46.3438253},{"id":"BL-00036","data":"14/09/2026","hora":"08:39:00","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":915,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236751669,"longitude":-463437259,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-23.6751669,"lon_num":-46.3437259},{"id":"BL-00037","data":"14/09/2026","hora":"08:39:30","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":915,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-2367516,"longitude":-46343678,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-0.2367516,"lon_num":-4.6343678},{"id":"BL-00038","data":"14/09/2026","hora":"08:41:04","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":893,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Afundamento caixa","observacoes":"Numeração errada","latitude":-236771142,"longitude":-463423241,"precisao_gps":1.27550001144409e+16,"numero_via_oficial":23090001,"lat_num":-23.6771142,"lon_num":-46.3423241},{"id":"BL-00039","data":"14/09/2026","hora":"08:41:57","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":895,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Fora de padrão","observacoes":"Numeração fora de padrão","latitude":-236766699,"longitude":-463419535,"precisao_gps":1.46070003509521e+16,"numero_via_oficial":23090001,"lat_num":-23.6766699,"lon_num":-46.3419535},{"id":"BL-00040","data":"14/09/2026","hora":"08:44:03","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1020,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236770117,"longitude":-463412278,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-23.6770117,"lon_num":-46.3412278},{"id":"BL-00041","data":"14/09/2026","hora":"08:44:27","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1020,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236769592,"longitude":-463411737,"precisao_gps":6632999897003170.0,"numero_via_oficial":23090001,"lat_num":-23.6769592,"lon_num":-46.3411737},{"id":"BL-00042","data":"14/09/2026","hora":"08:45:01","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1021,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236770814,"longitude":-463412423,"precisao_gps":2.19349994659423e+16,"numero_via_oficial":23090001,"lat_num":-23.6770814,"lon_num":-46.3412423},{"id":"BL-00043","data":"14/09/2026","hora":"08:45:24","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1021,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-23677096,"longitude":-463412456,"precisao_gps":1.86180000305175e+16,"numero_via_oficial":23090001,"lat_num":-2.3677096,"lon_num":-46.3412456},{"id":"BL-00044","data":"14/09/2026","hora":"08:46:59","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1090,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236776154,"longitude":-46340527,"precisao_gps":5.02449989318847e+16,"numero_via_oficial":23090001,"lat_num":-23.6776154,"lon_num":-4.6340527},{"id":"BL-00045","data":"14/09/2026","hora":"08:47:21","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1090,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236772492,"longitude":-463408619,"precisao_gps":4652299880981440.0,"numero_via_oficial":23090001,"lat_num":-23.6772492,"lon_num":-46.3408619},{"id":"BL-00046","data":"14/09/2026","hora":"08:47:54","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1091,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-23677459,"longitude":-46340966,"precisao_gps":3.9652000427246e+16,"numero_via_oficial":23090001,"lat_num":-2.3677459,"lon_num":-4.6340966},{"id":"BL-00047","data":"14/09/2026","hora":"08:48:20","tipo":"Boca de Lobo","logradouro":"AVENIDA VEREADOR RUBENS MAZIERO","numero":1091,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236773712,"longitude":-463409057,"precisao_gps":3892599868774410.0,"numero_via_oficial":23090001,"lat_num":-23.6773712,"lon_num":-46.3409057},{"id":"BL-00048","data":"14/09/2026","hora":"08:52:50","tipo":"Boca de Lobo","logradouro":"RUA BAGRE","numero":10,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236773592,"longitude":-463409589,"precisao_gps":2.54680004119873e+16,"numero_via_oficial":23080011,"lat_num":-23.6773592,"lon_num":-46.3409589},{"id":"BL-00049","data":"14/09/2026","hora":"08:53:15","tipo":"Boca de Lobo","logradouro":"RUA BAGRE","numero":10,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236774372,"longitude":-463409966,"precisao_gps":6632999897003170.0,"numero_via_oficial":23080011,"lat_num":-23.6774372,"lon_num":-46.3409966},{"id":"BL-00050","data":"14/09/2026","hora":"08:55:44","tipo":"Boca de Lobo","logradouro":"RUA BAGRE","numero":214,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236780032,"longitude":-463426522,"precisao_gps":1.36960000991821e+16,"numero_via_oficial":23080011,"lat_num":-23.6780032,"lon_num":-46.3426522},{"id":"BL-00051","data":"14/09/2026","hora":"08:56:10","tipo":"Boca de Lobo","logradouro":"RUA BAGRE","numero":215,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236779145,"longitude":-463427595,"precisao_gps":2.3777000427246e+16,"numero_via_oficial":23080011,"lat_num":-23.6779145,"lon_num":-46.3427595},{"id":"BL-00052","data":"14/09/2026","hora":"09:01:14","tipo":"Boca de Lobo","logradouro":"RUA ORLANDO ALVES DE ARAÚJO","numero":10,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza","observacoes":"","latitude":-236775754,"longitude":-463414169,"precisao_gps":7.65299987792968e+16,"numero_via_oficial":23080014,"lat_num":-23.6775754,"lon_num":-46.3414169},{"id":"BL-00053","data":"14/09/2026","hora":"09:01:38","tipo":"Boca de Lobo","logradouro":"RUA ORLANDO ALVES DE ARAÚJO","numero":10,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Limpeza","observacoes":"","latitude":-236777645,"longitude":-463412712,"precisao_gps":82.5,"numero_via_oficial":23080014,"lat_num":-23.6777645,"lon_num":-46.3412712},{"id":"BL-00054","data":"14/09/2026","hora":"09:02:16","tipo":"Boca de Lobo","logradouro":"RUA ORLANDO ALVES DE ARAÚJO","numero":11,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236775228,"longitude":-463414246,"precisao_gps":6632999897003170.0,"numero_via_oficial":23080014,"lat_num":-23.6775228,"lon_num":-46.3414246},{"id":"BL-00055","data":"14/09/2026","hora":"09:02:46","tipo":"Boca de Lobo","logradouro":"RUA ORLANDO ALVES DE ARAÚJO","numero":11,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236774606,"longitude":-463415944,"precisao_gps":42.5,"numero_via_oficial":23080014,"lat_num":-23.6774606,"lon_num":-46.3415944},{"id":"BL-00056","data":"14/09/2026","hora":"09:14:49","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":114,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236786818,"longitude":-463421864,"precisao_gps":3.06439990997314e+16,"numero_via_oficial":23080007,"lat_num":-23.6786818,"lon_num":-46.3421864},{"id":"BL-00057","data":"14/09/2026","hora":"09:15:12","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":114,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236785405,"longitude":-463421215,"precisao_gps":2.44720001220703e+16,"numero_via_oficial":23080007,"lat_num":-23.6785405,"lon_num":-46.3421215},{"id":"BL-00058","data":"14/09/2026","hora":"09:15:45","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":115,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-2367871,"longitude":-463420791,"precisao_gps":3.07380008697509e+16,"numero_via_oficial":23080007,"lat_num":-0.2367871,"lon_num":-46.3420791},{"id":"BL-00059","data":"14/09/2026","hora":"09:16:08","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":115,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236786919,"longitude":-463422242,"precisao_gps":2470400047302240.0,"numero_via_oficial":23080007,"lat_num":-23.6786919,"lon_num":-46.3422242},{"id":"BL-00060","data":"14/09/2026","hora":"09:17:33","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":47,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236783725,"longitude":-463426224,"precisao_gps":1.86420001983642e+16,"numero_via_oficial":23080007,"lat_num":-23.6783725,"lon_num":-46.3426224},{"id":"BL-00061","data":"14/09/2026","hora":"09:17:58","tipo":"Boca de Lobo","logradouro":"RUA DOS PESCADORES","numero":47,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236783121,"longitude":-463425407,"precisao_gps":714300012588501.0,"numero_via_oficial":23080007,"lat_num":-23.6783121,"lon_num":-46.3425407},{"id":"BL-00062","data":"14/09/2026","hora":"09:21:50","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":242,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236785285,"longitude":-463428369,"precisao_gps":2.80869998931884e+16,"numero_via_oficial":23080013,"lat_num":-23.6785285,"lon_num":-46.3428369},{"id":"BL-00063","data":"14/09/2026","hora":"09:22:18","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":242,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236782608,"longitude":-463427339,"precisao_gps":2855299949645990.0,"numero_via_oficial":23080013,"lat_num":-23.6782608,"lon_num":-46.3427339},{"id":"BL-00064","data":"14/09/2026","hora":"09:23:04","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":245,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236783027,"longitude":-463427382,"precisao_gps":2.07560005187988e+16,"numero_via_oficial":23080013,"lat_num":-23.6783027,"lon_num":-46.3427382},{"id":"BL-00065","data":"14/09/2026","hora":"09:23:26","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":245,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236784491,"longitude":-463426813,"precisao_gps":2.65599994659423e+16,"numero_via_oficial":23080013,"lat_num":-23.6784491,"lon_num":-46.3426813},{"id":"BL-00066","data":"14/09/2026","hora":"09:25:07","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":278,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236787492,"longitude":-463427906,"precisao_gps":2179800033569330.0,"numero_via_oficial":23080013,"lat_num":-23.6787492,"lon_num":-46.3427906},{"id":"BL-00067","data":"14/09/2026","hora":"09:25:31","tipo":"Boca de Lobo","logradouro":"RUA ESTRELA DO MAR","numero":278,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236787818,"longitude":-463427691,"precisao_gps":2476300048828120.0,"numero_via_oficial":23080013,"lat_num":-23.6787818,"lon_num":-46.3427691},{"id":"BL-00068","data":"14/09/2026","hora":"09:30:13","tipo":"Boca de Lobo","logradouro":"RUA SEREIA","numero":20,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236772554,"longitude":-463429658,"precisao_gps":9184000015258780.0,"numero_via_oficial":23080008,"lat_num":-23.6772554,"lon_num":-46.3429658},{"id":"BL-00069","data":"14/09/2026","hora":"09:30:39","tipo":"Boca de Lobo","logradouro":"RUA SEREIA","numero":20,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-23677456,"longitude":-463429522,"precisao_gps":2.39740009307861e+16,"numero_via_oficial":23080008,"lat_num":-2.3677456,"lon_num":-46.3429522},{"id":"BL-00070","data":"14/09/2026","hora":"09:36:50","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":531,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236752237,"longitude":-46344561,"precisao_gps":6632999897003170.0,"numero_via_oficial":23080002,"lat_num":-23.6752237,"lon_num":-4.6344561},{"id":"BL-00071","data":"14/09/2026","hora":"09:37:21","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":531,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236752473,"longitude":-463444518,"precisao_gps":2.76959991455078e+16,"numero_via_oficial":23080002,"lat_num":-23.6752473,"lon_num":-46.3444518},{"id":"BL-00072","data":"14/09/2026","hora":"09:38:47","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":530,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236752639,"longitude":-463444728,"precisao_gps":2.16310005187988e+16,"numero_via_oficial":23080002,"lat_num":-23.6752639,"lon_num":-46.3444728},{"id":"BL-00073","data":"14/09/2026","hora":"09:39:11","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":530,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236752805,"longitude":-463444733,"precisao_gps":1.94640007019042e+16,"numero_via_oficial":23080002,"lat_num":-23.6752805,"lon_num":-46.3444733},{"id":"BL-00074","data":"14/09/2026","hora":"09:40:57","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":525,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236752455,"longitude":-463448438,"precisao_gps":2.1503999710083e+16,"numero_via_oficial":23080002,"lat_num":-23.6752455,"lon_num":-46.3448438},{"id":"BL-00075","data":"14/09/2026","hora":"09:41:23","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":525,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236752422,"longitude":-463448638,"precisao_gps":2.4277000427246e+16,"numero_via_oficial":23080002,"lat_num":-23.6752422,"lon_num":-46.3448638},{"id":"BL-00076","data":"14/09/2026","hora":"09:41:49","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":524,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236752543,"longitude":-463449282,"precisao_gps":3.02339992523193e+16,"numero_via_oficial":23080002,"lat_num":-23.6752543,"lon_num":-46.3449282},{"id":"BL-00077","data":"14/09/2026","hora":"09:42:14","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":524,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236752686,"longitude":-46344801,"precisao_gps":684000015258789.0,"numero_via_oficial":23080002,"lat_num":-23.6752686,"lon_num":-4.6344801},{"id":"BL-00078","data":"14/09/2026","hora":"09:44:05","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":409,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar tampa","observacoes":"","latitude":-236753527,"longitude":-463456916,"precisao_gps":2.0208999633789e+16,"numero_via_oficial":23080002,"lat_num":-23.6753527,"lon_num":-46.3456916},{"id":"BL-00079","data":"14/09/2026","hora":"09:44:48","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":409,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar tampa","observacoes":"","latitude":-236753753,"longitude":-463457407,"precisao_gps":2.22439994812011e+16,"numero_via_oficial":23080002,"lat_num":-23.6753753,"lon_num":-46.3457407},{"id":"BL-00080","data":"14/09/2026","hora":"09:46:00","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":418,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236752787,"longitude":-463457064,"precisao_gps":684000015258789.0,"numero_via_oficial":23080002,"lat_num":-23.6752787,"lon_num":-46.3457064},{"id":"BL-00081","data":"14/09/2026","hora":"09:46:29","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":418,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"","observacoes":"","latitude":-236753079,"longitude":-463457602,"precisao_gps":5.24000015258789e+16,"numero_via_oficial":23080002,"lat_num":-23.6753079,"lon_num":-46.3457602},{"id":"BL-00082","data":"14/09/2026","hora":"09:49:15","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":399,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"Trocar tampa","observacoes":"","latitude":-236754153,"longitude":-463464371,"precisao_gps":7.65299987792968e+16,"numero_via_oficial":23080002,"lat_num":-23.6754153,"lon_num":-46.3464371},{"id":"BL-00083","data":"14/09/2026","hora":"09:49:42","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":399,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236755438,"longitude":-463464824,"precisao_gps":3.97490005493164e+16,"numero_via_oficial":23080002,"lat_num":-23.6755438,"lon_num":-46.3464824},{"id":"BL-00084","data":"14/09/2026","hora":"09:53:24","tipo":"Boca de Lobo","logradouro":"RUA JORDÃO DE MORAES","numero":2,"bairro":"OURO FINO PAULISTA","posicao":"Direita","problemas":"Fora de padrão","observacoes":"","latitude":-236747027,"longitude":-463498328,"precisao_gps":1.02040004730224e+16,"numero_via_oficial":23080002,"lat_num":-23.6747027,"lon_num":-46.3498328},{"id":"BL-00085","data":"14/09/2026","hora":"10:01:44","tipo":"Boca de Lobo","logradouro":"RUA OURO VERDE","numero":5,"bairro":"OURO FINO PAULISTA","posicao":"Esquerda","problemas":"","observacoes":"","latitude":-236731548,"longitude":-463486181,"precisao_gps":2426099967956540.0,"numero_via_oficial":23070003,"lat_num":-23.6731548,"lon_num":-46.3486181}];
+let data=original.slice();
+const $=id=>document.getElementById(id);
+const colors=["#e4572e","#f28e2b","#f6aa4b","#c94c13","#e76f24","#ffb35c","#b83b0e","#d97706","#ef8a17","#9f4a16","#f4a261","#cc5500"];
+let bairroColors={};
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function v(r,k){return r[k]===null||r[k]===undefined?"":String(r[k]).trim()}
+function unique(k){return [...new Set(original.map(r=>v(r,k)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"))}
+function fill(id,a){a.forEach(x=>$(id).insertAdjacentHTML("beforeend","<option>"+esc(x)+"</option>"))}
+function counts(arr,k){let m={};arr.forEach(r=>{let x=v(r,k)||"Não informado";m[x]=(m[x]||0)+1});return m}
+function filtered(){
+ let q=$("search").value.toLowerCase();
+ return original.filter(r=>
+ (!q||["id","logradouro","numero","bairro","tipo","posicao","problemas","observacoes"].some(k=>v(r,k).toLowerCase().includes(q))) &&
+ (!$("bairro").value||v(r,"bairro")===$("bairro").value)&&
+ (!$("tipo").value||v(r,"tipo")===$("tipo").value)&&
+ (!$("posicao").value||v(r,"posicao")===$("posicao").value)&&
+ (!$("problema").value||v(r,"problemas").toLowerCase().includes($("problema").value.toLowerCase()))
+ )}
+function render(){
+ data=filtered();
+ const streets=counts(data,"logradouro"), probs=counts(data,"problemas"), pos=counts(data,"posicao");
+ const boca=data.filter(r=>/boca/i.test(v(r,"tipo"))).length;
+ const caixa=data.filter(r=>/caixa/i.test(v(r,"tipo"))).length;
+ $("stats").innerHTML=[
+ ["Registros",data.length],["Bocas de lobo",boca],["Caixas",caixa],
+ ["Logradouros",Object.keys(streets).filter(x=>x!="Não informado").length],
+ ["Com localização",data.filter(r=>r.lat_num!=null&&r.lon_num!=null).length]
+ ].map(x=>'<div class="stat"><b>'+x[1]+'</b><span>'+x[0]+'</span></div>').join("");
+ let streetRows=Object.entries(streets).sort((a,b)=>b[1]-a[1]);
+ $("summary").innerHTML=
+ '<h3>Quantidade por logradouro</h3>'+(streetRows.length?'<table>'+streetRows.map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+x[1]+'</td></tr>').join("")+'</table>':'—')+
+ '<h3 style="margin-top:20px">Posição na rua</h3><div class="badges">'+Object.entries(pos).sort((a,b)=>b[1]-a[1]).map(x=>'<span class="badge">'+esc(x[0])+': <b>'+x[1]+'</b></span>').join("")+'</div>'+
+ '<h3 style="margin-top:20px">Problemas e contagens</h3><div class="badges">'+Object.entries(probs).sort((a,b)=>b[1]-a[1]).map(x=>'<span class="badge">'+esc(x[0])+': <b>'+x[1]+'</b></span>').join("")+'</div>';
+ $("cards").innerHTML=data.map((r,i)=>'<article class="card" data-id="'+esc(v(r,"id"))+'"><div class="card-head"><h3>'+esc(v(r,"id"))+' — '+esc(v(r,"logradouro"))+(v(r,"numero")?', nº '+esc(v(r,"numero")):'')+'</h3><span class="type">'+esc(v(r,"tipo")||"Cadastro")+'</span></div>'+
+ '<div class="row"><b>Bairro</b><span>'+esc(v(r,"bairro")||"—")+'</span></div>'+
+ '<div class="row"><b>Posição</b><span><span class="pos">'+esc(v(r,"posicao")||"Não informada")+'</span></span></div>'+
+ '<div class="row"><b>Problema</b><span>'+esc(v(r,"problemas")||"Sem problema informado")+'</span></div>'+
+ '<div class="row"><b>Observações</b><span>'+esc(v(r,"observacoes")||"—")+'</span></div>'+
+ '<div class="row"><b>GPS</b><span class="coords">'+(r.lat_num??"—")+', '+(r.lon_num??"—")+'</span></div></article>').join("")||'<div class="card">Nenhum registro encontrado.</div>';
+ if(!mapReady){initMap();mapReady=true}else{renderMap();}
+}
+function gpsCoord(r){
+  function norm(raw, kind){
+    let n=Number(raw);
+    if(!Number.isFinite(n)) return null;
+    let a=Math.abs(n);
+    if(kind==="lat" && a>90) return n/(a<1e8?1e6:1e7);
+    if(kind==="lon" && a>180) return n/(a<1e8?1e6:1e7);
+    return n;
+  }
+  let lat=norm(r.latitude,"lat"), lon=norm(r.longitude,"lon");
+  if(lat===null || lon===null || Math.abs(lat)>90 || Math.abs(lon)>180) return null;
+  return {lat,lon};
+}
+
+let mapState={zoom:16,cx:0,cy:0,drag:false,sx:0,sy:0,ox:0,oy:0}; let mapReady=false;
+const TILE=256;
+const MAP_SERVERS=[
+  zxy=>"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/"+zxy.z+"/"+zxy.y+"/"+zxy.x,
+  zxy=>"https://tile.openstreetmap.org/"+zxy.z+"/"+zxy.x+"/"+zxy.y+".png"
+];
+let tileServerIndex=0;
+
+function lon2x(lon,z){return (lon+180)/360*Math.pow(2,z)}
+function lat2y(lat,z){let r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*Math.pow(2,z)}
+function x2lon(x,z){return x/Math.pow(2,z)*360-180}
+function y2lat(y,z){let n=Math.PI-2*Math.PI*y/Math.pow(2,z);return 180/Math.PI*Math.atan(.5*(Math.exp(n)-Math.exp(-n)))}
+
+function validPoints(){
+  return data.map((r,i)=>{let p=gpsCoord(r);return p?{r,i,...p}:null}).filter(Boolean);
+}
+
+function fitMap(){
+  let pts=validPoints();
+  if(!pts.length)return;
+  let lat=pts.reduce((s,p)=>s+p.lat,0)/pts.length;
+  let lon=pts.reduce((s,p)=>s+p.lon,0)/pts.length;
+  mapState.zoom=16;
+  mapState.cx=lon2x(lon,mapState.zoom);
+  mapState.cy=lat2y(lat,mapState.zoom);
+}
+
+function renderMap(){
+  const map=$("map"), tiles=$("mapTiles"), markers=$("mapMarkers");
+  if(!map||!tiles||!markers)return;
+  tiles.innerHTML="";markers.innerHTML="";
+  const pts=validPoints();
+  if(!pts.length){$("mapStatus").textContent="Nenhum registro com coordenadas válidas.";return}
+  const w=map.clientWidth,h=map.clientHeight,z=mapState.zoom,world=Math.pow(2,z);
+  const left=mapState.cx*TILE-w/2,top=mapState.cy*TILE-h/2;
+  const baseX=Math.floor(mapState.cx),baseY=Math.floor(mapState.cy);
+  const cols=Math.ceil(w/TILE)+3,rows=Math.ceil(h/TILE)+3;
+
+  for(let ty=baseY-Math.floor(rows/2)-1;ty<=baseY+Math.floor(rows/2)+1;ty++){
+    for(let tx=baseX-Math.floor(cols/2)-1;tx<=baseX+Math.floor(cols/2)+1;tx++){
+      let xx=((tx%world)+world)%world,yy=ty;
+      if(yy<0||yy>=world)continue;
+      let img=document.createElement("img");
+      img.className="map-tile";img.draggable=false;img.alt="";
+      img.style.left=(tx*TILE-left)+"px";img.style.top=(ty*TILE-top)+"px";
+      img.src=MAP_SERVERS[tileServerIndex]({z,y:yy,x:xx});
+      img.onerror=function(){
+        if(tileServerIndex<MAP_SERVERS.length-1){tileServerIndex++;renderMap()}
+      };
+      tiles.appendChild(img);
+    }
+  }
+
+  let bs=[...new Set(pts.map(p=>v(p.r,"bairro")).filter(Boolean))].sort();
+  bs.forEach((b,i)=>bairroColors[b]=colors[i%colors.length]);
+
+  pts.forEach(p=>{
+    let px=lon2x(p.lon,z)*TILE-left,py=lat2y(p.lat,z)*TILE-top;
+    if(px<-30||py<-30||px>w+30||py>h+30)return;
+    let b=v(p.r,"bairro")||"Sem bairro",c=bairroColors[b]||"#777";
+    let m=document.createElement("div");
+    m.className="map-marker";m.style.left=px+"px";m.style.top=py+"px";m.style.background=c;m.style.color=c;
+    m.title=v(p.r,"logradouro")+" • "+v(p.r,"tipo")+" • "+b;
+    m.onclick=e=>{
+      e.stopPropagation();
+      document.querySelectorAll(".map-popup").forEach(x=>x.remove());
+      let pop=document.createElement("div");pop.className="map-popup";
+      pop.style.left=Math.min(Math.max(px+12,8),w-325)+"px";
+      pop.style.top=Math.min(Math.max(py-95,8),h-155)+"px";
+      pop.innerHTML='<button class="close">×</button><b>'+esc(v(p.r,"logradouro"))+', '+esc(v(p.r,"numero")||"s/n")+'</b>'+
+        '<div>'+esc(v(p.r,"tipo"))+' • '+esc(v(p.r,"posicao")||"posição não informada")+'</div>'+
+        '<div><strong>Bairro:</strong> '+esc(b)+'</div>'+
+        '<div><strong>ID:</strong> '+esc(v(p.r,"id"))+'</div>'+
+        '<div class="coords">'+p.lat.toFixed(7)+', '+p.lon.toFixed(7)+'</div>'+
+        '<div style="margin-top:6px"><button class="go-card" style="padding:6px 8px;font-size:10px">Abrir cadastro</button></div>';
+      pop.querySelector(".close").onclick=()=>pop.remove();
+      pop.querySelector(".go-card").onclick=()=>{
+        pop.remove();
+        let card=[...document.querySelectorAll(".card")].find(c=>c.getAttribute("data-id")===v(p.r,"id"));
+        if(card)card.scrollIntoView({behavior:"smooth",block:"center"});
+      };
+      map.appendChild(pop);
+    };
+    markers.appendChild(m);
+  });
+  $("mapStatus").textContent=pts.length+" ponto(s) • zoom "+z+" • cor por bairro";
+}
+
+function zoomMap(delta){
+  let old=mapState.zoom,newz=Math.max(13,Math.min(19,old+delta));
+  if(newz===old)return;
+  let lon=x2lon(mapState.cx,old),lat=y2lat(mapState.cy,old);
+  mapState.zoom=newz;mapState.cx=lon2x(lon,newz);mapState.cy=lat2y(lat,newz);
+  renderMap();
+}
+
+function initMap(){
+  fitMap();renderMap();
+  $("zoomIn").onclick=()=>zoomMap(1);
+  $("zoomOut").onclick=()=>zoomMap(-1);
+  $("zoomFit").onclick=()=>{fitMap();renderMap()};
+  const map=$("map");
+  map.addEventListener("mousedown",e=>{
+    if(e.target.closest(".map-marker,.map-popup,#mapZoom"))return;
+    mapState.drag=true;mapState.sx=e.clientX;mapState.sy=e.clientY;mapState.ox=mapState.cx;mapState.oy=mapState.cy;map.classList.add("dragging");
+  });
+  window.addEventListener("mousemove",e=>{
+    if(!mapState.drag)return;
+    mapState.cx=mapState.ox-(e.clientX-mapState.sx)/TILE;
+    mapState.cy=mapState.oy-(e.clientY-mapState.sy)/TILE;
+    renderMap();
+  });
+  window.addEventListener("mouseup",()=>{mapState.drag=false;map.classList.remove("dragging")});
+  map.addEventListener("wheel",e=>{e.preventDefault();zoomMap(e.deltaY<0?1:-1)},{passive:false});
+  map.addEventListener("dblclick",e=>{e.preventDefault();zoomMap(1)});
+  map.addEventListener("click",e=>{if(e.target===map)document.querySelectorAll(".map-popup").forEach(x=>x.remove())});
+  window.addEventListener("resize",renderMap);
+}
+
+function clearFilters(){["search","bairro","tipo","posicao","problema"].forEach(id=>$(id).value="");render()}
+function init(){fill("bairro",unique("bairro"));fill("tipo",unique("tipo"));fill("posicao",unique("posicao"));fill("problema",unique("problemas"));document.querySelectorAll("select,#search").forEach(x=>x.addEventListener("input",render));render()}
+window.addEventListener("load",init);
+</script></body></html>
